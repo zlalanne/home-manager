@@ -269,7 +269,10 @@ in
     home.username = mkDefault (builtins.getEnv "USER");
     home.homeDirectory = mkDefault (builtins.getEnv "HOME");
 
-    home.profileDirectory = cfg.homeDirectory + "/.nix-profile";
+    home.profileDirectory =
+      if config.submoduleSupport.enable
+      then config.home.path
+      else cfg.homeDirectory + "/.nix-profile";
 
     home.sessionVariables =
       let
