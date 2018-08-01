@@ -4,7 +4,7 @@ with lib;
 
 let
 
-  cfg = config.home-manager;
+  cfg = config.users;
 
   hmModule = types.submodule ({name, ...}: {
     imports = import ../modules/modules.nix {
@@ -13,8 +13,8 @@ let
     };
 
     config = {
-      home.username = config.users.users.${name}.name;
-      home.homeDirectory = config.users.users.${name}.home;
+      home.username = cfg.users.${name}.name;
+      home.homeDirectory = cfg.users.${name}.home;
     };
   });
 
@@ -22,16 +22,22 @@ in
 
 {
   options = {
-    home-manager.users = mkOption {
-      type = types.attrsOf hmModule;
-      default = {};
-      description = ''
-        Per-user Home Manager configuration.
-      '';
+    users.users = mkOption {
+      options = [
+        {
+          home-manager = mkOption {
+            type = types.attrsOf hmModule;
+            default = {};
+            description = ''
+              Per-user Home Manager configuration.
+            '';
+          };
+        }
+      ];
     };
   };
 
-  config = mkIf (cfg.users != {}) {
+  config = {
     systemd.services = mapAttrs' (username: usercfg:
       nameValuePair ("home-manager-${utils.escapeSystemdPath username}") {
         description = "Home Manager environment for ${username}";
@@ -50,10 +56,10 @@ in
           ExecStart = pkgs.writeScript "activate-${username}" ''
             #! ${pkgs.stdenv.shell} -el
             echo Activating home-manager configuration for ${username}
-            exec ${usercfg.home.activationPackage}/activate
+            exec ${usercfg.home-manager.home.activationPackage}/activate
           '';
         };
       }
-    ) cfg.users;
+    ) (filterAttrs (n: v: v ? home-manager) cfg.users);
   };
 }
