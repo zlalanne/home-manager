@@ -46,6 +46,7 @@ import nmt {
   // import ./modules/programs/git
   // import ./modules/programs/gpg
   // import ./modules/programs/newsboat
+  // import ./modules/programs/notmuch
   // import ./modules/programs/readline
   // import ./modules/programs/ssh
   // import ./modules/programs/tmux
