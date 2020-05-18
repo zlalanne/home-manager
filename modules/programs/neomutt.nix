@@ -54,7 +54,7 @@ let
   bindModule = types.submodule {
     options = {
       map = mkOption {
-        type = types.enum [
+        type = types.listOf types.enum [
           "alias"
           "attach"
           "browser"
@@ -69,7 +69,7 @@ let
           "query"
           "smime"
         ];
-        default = "index";
+        default = [ "index" ];
         description = "Select the menu to bind the command to.";
       };
 
@@ -87,8 +87,14 @@ let
     };
   };
 
+  attrToStr = attr:
+    if builtins.isBool attr
+      then yesno attr
+      else toString attr;
+
   yesno = x: if x then "yes" else "no";
-  setOption = n: v: if v == null then "unset ${n}" else "set ${n}=${v}";
+  setOption = n: v: if v == null then "unset ${n}" else "set ${n}=${attrToStr v}";
+
   escape = replaceStrings [ "%" ] [ "%25" ];
 
   accountFilename = account: config.xdg.configHome + "/neomutt/" + account.name;
@@ -144,13 +150,12 @@ let
 
   optionsStr = attrs: concatStringsSep "\n" (mapAttrsToList setOption attrs);
 
-  sidebarSection = ''
-    # Sidebar
-    set sidebar_visible = yes
-    set sidebar_short_path = ${yesno cfg.sidebar.shortPath}
-    set sidebar_width = ${toString cfg.sidebar.width}
-    set sidebar_format = '${cfg.sidebar.format}'
-  '';
+  sidebarSection = "# Sidebar\n" + optionsStr {
+    sidebar_visible = true;
+    sidebar_short_path = cfg.sidebar.shortPath;
+    sidebar_width = cfg.sidebar.width;
+    sidebar_format = "'${cfg.sidebar.format}'";
+  };
 
   bindSection = concatMapStringsSep "\n"
     (bind: ''bind ${bind.map} ${bind.key} "${bind.action}"'') cfg.binds;
@@ -158,10 +163,10 @@ let
   macroSection = concatMapStringsSep "\n"
     (bind: ''macro ${bind.map} ${bind.key} "${bind.action}"'') cfg.macros;
 
-  mailCheckSection = ''
-    set mail_check_stats
-    set mail_check_stats_interval = ${toString cfg.checkStatsInterval}
-  '';
+  mailCheckSection = optionsStr {
+    mail_check_stats = true;
+    mail_check_stats_interval = cfg.checkStatsInterval;
+  };
 
   notmuchSection = account:
     with account; ''
@@ -251,7 +256,7 @@ in {
       };
 
       settings = mkOption {
-        type = types.attrsOf types.str;
+        type = types.attrs;
         default = { };
         description = "Extra configuration appended to the end.";
       };
