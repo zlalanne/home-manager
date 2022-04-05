@@ -296,6 +296,32 @@ in {
           '';
         };
       };
+
+      diff-so-fancy = {
+        enable = mkEnableOption "" // {
+          description = ''
+            Whether to enable the <command>diff-so-fancy</command> syntax
+            highlighter. See <link xlink:href="https://github.com/so-fancy/diff-so-fancy" />.
+          '';
+        };
+
+        options = mkOption {
+          type = with types;
+            let
+              primitiveType = either str (either bool int);
+              sectionType = attrsOf primitiveType;
+            in attrsOf (either primitiveType sectionType);
+          default = { };
+          example = {
+            markEmptyLines = false;
+            changeHunkIndicators = false;
+            rulerWidth = 47;
+          };
+          description = ''
+            Options to configure diff-so-fancy.
+          '';
+        };
+      };
     };
   };
 
@@ -304,8 +330,7 @@ in {
       home.packages = [ cfg.package ];
       assertions = [{
         assertion = !(cfg.delta.enable && cfg.difftastic.enable);
-        message =
-          "Only one of 'programs.git.delta.enable' or 'programs.git.difftastic.enable' can be set to true at the same time.";
+        message = "Only one of 'programs.git.delta.enable', 'programs.git.difftastic.enable', or 'programs.git.diff-so-fancy.enable' can be set to true at the same time.";
       }];
 
       programs.git.iniContent.user = {
@@ -432,5 +457,17 @@ in {
         delta = cfg.delta.options;
       };
     })
+
+    (mkIf cfg.diff-so-fancy.enable {
+      home.packages = [pkgs.diff-so-fancy pkgs.less];
+
+      programs.git.iniContent = let diffSoFancyCommand = "${pkgs.diff-so-fancy}/bin/diff-so-fancy";
+      in {
+        core.pager = "${diffSoFancyCommand} | ${pkgs.less}/bin/less --tabs=4 -RFX";
+        interfactive.diffFilter = "${diffSoFancyCommand} --patch";
+        diff-so-fancy = cfg.diff-so-fancy.options;
+      };
+    })
+
   ]);
 }
